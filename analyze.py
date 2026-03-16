@@ -222,18 +222,46 @@ def call_claude(prompt: str, max_tokens: int = 1024) -> str:
 
 
 def send_discord(message: str):
-    """Send a message to Discord via webhook."""
-    # Discord 2000 char limit — split if needed
-    chunks = [message[i:i+1990] for i in range(0, len(message), 1990)]
-    for chunk in chunks:
-        body = json.dumps({"content": chunk}).encode()
-        req = urllib.request.Request(
+    """Send a message to Discord via webhook using embeds for rich formatting."""
+    # Use embeds for longer messages — more reliable than content field
+    # Discord content field has a 2000 char limit; embed description has 4096
+    if len(message) <= 2000:
+        payload = {"content": message}
+    else:
+        # Split into title and body
+        lines = message.split("\n", 1)
+        title = lines[0][:256].replace("**", "").replace("*", "")
+        body = lines[1] if len(lines) > 1 else ""
+        payload = {
+            "embeds": [{
+                "title": title,
+                "description": body[:4090],
+                "color": 0x00FF00,  # green
+            }]
+        }
+
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        DISCORD_WEBHOOK_URL,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            pass
+    except urllib.error.HTTPError as e:
+        # If embed fails, try plain text fallback
+        print(f"  Discord embed failed ({e}), trying plain text...")
+        plain = message[:2000].replace("**", "").replace("*", "")
+        fallback = json.dumps({"content": plain}).encode("utf-8")
+        req2 = urllib.request.Request(
             DISCORD_WEBHOOK_URL,
-            data=body,
+            data=fallback,
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req2, timeout=10) as resp:
             pass
 
 
