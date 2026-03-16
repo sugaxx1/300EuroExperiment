@@ -416,24 +416,32 @@ Be specific. Cite the news and data that drive your reasoning. This is real mone
     print(f"\nFinal analysis:\n{analysis}")
 
     # ---- Notify ----
-    if analysis.strip().startswith("SIGNAL:"):
-        message = f"**TRADE SIGNAL** ({now.strftime('%Y-%m-%d %H:%M UTC')})\n\n{analysis[7:].strip()}"
-        send_discord(message)
-        print("\nDiscord notification sent (SIGNAL)")
-    elif analysis.strip().startswith("ALERT:"):
-        message = f"**MARKET ALERT** ({now.strftime('%Y-%m-%d %H:%M UTC')})\n\n{analysis[6:].strip()}"
-        send_discord(message)
-        print("\nDiscord notification sent (ALERT)")
-    elif analysis.strip().startswith("NO_SIGNAL:"):
-        print("\nNo signal — no notification sent.")
-    else:
-        lower = analysis.lower()
-        if any(word in lower for word in ["buy", "sell", "signal:", "alert:"]):
-            message = f"**ANALYSIS UPDATE** ({now.strftime('%Y-%m-%d %H:%M UTC')})\n\n{analysis[:1900]}"
+    # Claude sometimes adds preamble before the keyword — search anywhere in text
+    analysis_clean = analysis.strip()
+    has_signal = "SIGNAL:" in analysis_clean and "NO_SIGNAL:" not in analysis_clean
+    has_alert = "ALERT:" in analysis_clean
+    has_no_signal = "NO_SIGNAL:" in analysis_clean
+
+    try:
+        if has_signal:
+            # Extract everything from SIGNAL: onward
+            signal_start = analysis_clean.index("SIGNAL:")
+            signal_text = analysis_clean[signal_start + 7:].strip()
+            message = f"**TRADE SIGNAL** ({now.strftime('%Y-%m-%d %H:%M UTC')})\n\n{signal_text}"
             send_discord(message)
-            print("\nDiscord notification sent (fallback)")
+            print("\nDiscord notification sent (SIGNAL)")
+        elif has_alert:
+            alert_start = analysis_clean.index("ALERT:")
+            alert_text = analysis_clean[alert_start + 6:].strip()
+            message = f"**MARKET ALERT** ({now.strftime('%Y-%m-%d %H:%M UTC')})\n\n{alert_text}"
+            send_discord(message)
+            print("\nDiscord notification sent (ALERT)")
+        elif has_no_signal:
+            print("\nNo signal — no notification sent.")
         else:
-            print("\nNo actionable signal — no notification sent.")
+            print("\nUnrecognized format — no notification sent.")
+    except Exception as e:
+        print(f"\nError sending Discord notification: {e}")
 
     print("\nDone.")
 
