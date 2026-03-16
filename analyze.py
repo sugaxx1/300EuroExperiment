@@ -251,18 +251,26 @@ def send_discord(message: str):
         with urllib.request.urlopen(req, timeout=10) as resp:
             pass
     except urllib.error.HTTPError as e:
-        # If embed fails, try plain text fallback
-        print(f"  Discord embed failed ({e}), trying plain text...")
-        plain = message[:2000].replace("**", "").replace("*", "")
-        fallback = json.dumps({"content": plain}).encode("utf-8")
-        req2 = urllib.request.Request(
-            DISCORD_WEBHOOK_URL,
-            data=fallback,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req2, timeout=10) as resp:
-            pass
+        error_body = e.read().decode() if e.fp else "no body"
+        print(f"  Discord send failed ({e.code}): {error_body}")
+        # If first attempt fails, try plain text fallback
+        if "embeds" in str(payload):
+            print("  Retrying with plain text...")
+            plain = message[:2000]
+            fallback = json.dumps({"content": plain}).encode("utf-8")
+            req2 = urllib.request.Request(
+                DISCORD_WEBHOOK_URL,
+                data=fallback,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req2, timeout=10) as resp:
+                    pass
+            except urllib.error.HTTPError as e2:
+                error_body2 = e2.read().decode() if e2.fp else "no body"
+                print(f"  Plain text also failed ({e2.code}): {error_body2}")
+                raise
 
 
 def read_file_from_repo(filename: str) -> str:
