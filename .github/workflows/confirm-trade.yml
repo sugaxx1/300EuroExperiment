@@ -1,0 +1,33 @@
+name: Confirm Trade
+
+on:
+  workflow_dispatch: # Manual trigger only — user clicks when ready to execute
+
+jobs:
+  confirm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download last signal
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Try to download the last signal artifact
+          gh run download --name last-signal --dir . 2>/dev/null || echo "No signal artifact found, checking repo..."
+          if [ ! -f last_signal.json ]; then
+            echo "No last_signal.json found — no pending signal to confirm."
+            exit 1
+          fi
+
+      - name: Run trade confirmation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python confirm.py

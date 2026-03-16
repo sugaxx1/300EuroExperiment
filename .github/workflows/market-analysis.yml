@@ -2,9 +2,8 @@ name: Market Analysis
 
 on:
   # schedule:
-  #   # Every 3 hours at :23 past the hour (off-peak to avoid GitHub Actions congestion)
-  #   - cron: '23 */3 * * *'
-  workflow_dispatch: # Allow manual trigger (keep this for re-enabling)
+  #   - cron: '17 * * * *'  # Every hour at :17 (disabled until capital arrives)
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   analyze:
@@ -23,3 +22,13 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python analyze.py
+
+      - name: Upload signal snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-signal
+          path: last_signal.json
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 7

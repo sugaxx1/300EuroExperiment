@@ -472,6 +472,23 @@ Be specific. Cite the news and data that drive your reasoning. This is real mone
             message = f"**TRADE SIGNAL** ({now.strftime('%Y-%m-%d %H:%M UTC')})\n\n{signal_text}"
             send_discord(message)
             print("\nDiscord notification sent (SIGNAL)")
+
+            # Save signal snapshot for confirmation script
+            snapshot = {
+                "timestamp": now.isoformat(),
+                "signal": signal_text,
+                "full_analysis": analysis,
+                "market_data": broad_data,
+                "asset_details": detail_str,
+                "stage1_research": stage1_result,
+            }
+            snapshot_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "last_signal.json"
+            )
+            with open(snapshot_path, "w", encoding="utf-8") as f:
+                json.dump(snapshot, f, indent=2, ensure_ascii=False)
+            print("Signal snapshot saved to last_signal.json")
+
         elif has_alert:
             alert_start = analysis_clean.index("ALERT:")
             alert_text = analysis_clean[alert_start + 6:].strip()
