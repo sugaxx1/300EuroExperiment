@@ -1,10 +1,10 @@
 name: Market Analysis
 
 on:
-  schedule:
-    # Every 3 hours at :23 past the hour (off-peak to avoid GitHub Actions congestion)
-    - cron: '23 */3 * * *'
-  workflow_dispatch: # Allow manual trigger
+  # schedule:
+  #   # Every 3 hours at :23 past the hour (off-peak to avoid GitHub Actions congestion)
+  #   - cron: '23 */3 * * *'
+  workflow_dispatch: # Allow manual trigger (keep this for re-enabling)
 
 jobs:
   analyze:
