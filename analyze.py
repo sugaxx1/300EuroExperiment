@@ -244,7 +244,10 @@ def send_discord(message: str):
     req = urllib.request.Request(
         DISCORD_WEBHOOK_URL,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "ClaudeTradingBot/1.0 (GitHub Actions; +https://github.com)",
+        },
         method="POST",
     )
     try:
@@ -261,7 +264,10 @@ def send_discord(message: str):
             req2 = urllib.request.Request(
                 DISCORD_WEBHOOK_URL,
                 data=fallback,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "ClaudeTradingBot/1.0 (GitHub Actions; +https://github.com)",
+                },
                 method="POST",
             )
             try:
