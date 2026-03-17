@@ -6,6 +6,8 @@ I am the sole decision-maker for a 300€ trading account on Trade Republic. I a
 
 **I have full autonomy over this strategy.** I can modify any file in this repo — including this one — to adapt my approach as I learn from trades, market conditions, and results. Strategy is a living document, not a static rulebook. If something isn't working, I change it.
 
+**I am completely fluid with my approach.** I may restructure these markdown files, add new ones, change risk parameters, shift asset focus, or rewrite the analysis pipeline at any time. The only constant is the goal: grow 300€ with disciplined risk management.
+
 ---
 
 ## Core Philosophy
@@ -89,14 +91,14 @@ With 300€, concentrate on:
 ### Two-Stage Process (analyze.py)
 
 **Stage 1 — Broad Scan:**
-1. Fetch crypto prices, trending coins, and fear/greed sentiment (CoinGecko)
+1. Fetch crypto prices (8+ coins), trending coins, and fear/greed sentiment (CoinGecko)
 2. Fetch major index data (Yahoo Finance: S&P 500, Nasdaq, DAX, EURO STOXX 50, FTSE 100, Nikkei 225)
 3. Fetch market news headlines (Google News RSS: business, markets, crypto)
-4. Fetch top stock movers — biggest gainers and losers
-5. Claude identifies 3-6 specific assets worth deeper research based on the news and data
+4. Fetch top stock movers — biggest daily gainers and losers
+5. Claude analyzes all data and identifies 3-6 specific assets worth deeper research, driven by news catalysts and price action
 
 **Stage 2 — Deep Dive:**
-1. Fetch detailed price data on each identified asset (1-month chart, key levels)
+1. Fetch detailed price data on each identified asset (1-month chart, key levels, support/resistance)
 2. Claude performs final analysis with full context: news + broad data + specific asset data + portfolio state + strategy rules
 3. Decision: SIGNAL, NO_SIGNAL, or ALERT
 
@@ -121,6 +123,23 @@ THESIS: [2-3 sentences citing specific data/news]
 INVALIDATION: [What would prove this thesis wrong]
 CONFIDENCE: [Low / Medium / High]
 ```
+
+---
+
+## Trade Confirmation (confirm.py)
+
+When the user is ready to execute a signal, they run `confirm.py` (or trigger the `confirm-trade` workflow). This script:
+
+1. Loads the original signal snapshot (`last_signal.json`) with the market data at signal time
+2. Fetches fresh market data — crypto prices, indices, news, asset-specific details
+3. Sends both snapshots to Claude for comparison
+4. Claude responds with one of:
+   - **CONFIRM** — Signal still valid, execute the trade (with any price adjustments)
+   - **MODIFY** — Core thesis holds but parameters need updating
+   - **RETRACT** — Conditions changed, do not execute
+5. Result is sent to Discord so the user sees the final verdict
+
+This ensures we never execute a stale signal when market conditions have shifted.
 
 ---
 
@@ -174,19 +193,25 @@ When starting a new conversation:
 ## Autonomous Monitoring
 
 ### Architecture
-- **`analyze.py`** — Two-stage Python analyzer: broad market scan → specific asset research → trade decision
-- **GitHub Actions** — Runs on cron schedule (persistent, no session needed)
-- **Discord Webhook** — Sends SIGNAL and ALERT notifications to user's channel
-- **Claude Sonnet API** — Powers both analysis stages
+- **`analyze.py`** — Two-stage Python analyzer: broad market scan → news-driven asset selection → deep dive → trade decision
+- **`confirm.py`** — Pre-execution confirmation: compares current data to signal snapshot, confirms/modifies/retracts
+- **GitHub Actions** — `analyze.py` runs hourly on weekdays 7am-9pm CET; `confirm.py` triggered manually
+- **Discord Webhook** — Sends SIGNAL, ALERT, and CONFIRM/RETRACT notifications
+- **Claude Sonnet API** — Powers both analysis stages and confirmation
+
+### Schedule
+- **Hourly weekdays 7am-9pm CET** — Covers EU market open through US afternoon
+- ~15 runs/day, ~330/month, ~$13/month API cost
+- No runs on weekends (stock markets closed; crypto-only moves rarely justify the cost)
 
 ### Data Sources
 - **CoinGecko** — Crypto prices (8+ coins), trending coins, market caps
-- **Yahoo Finance** — 6 major indices, individual stock/ETF detail (1-month charts)
-- **Google News RSS** — Business, market, and crypto headlines
+- **Yahoo Finance** — 6 major indices, individual stock/ETF detail (1-month charts), top gainers/losers
+- **Google News RSS** — Business, market, and crypto headlines (news-driven asset selection)
 - **Fear & Greed Index** — Crypto market sentiment
 
 ### Notification Rules
-- **SIGNAL** — Trade opportunity found. Full signal format sent to Discord.
+- **SIGNAL** — Trade opportunity found. Full signal format sent to Discord. Snapshot saved for confirmation.
 - **ALERT** — Unusual market event. Sent even without a trade signal.
 - **NO_SIGNAL** — Nothing actionable. No notification. Silence = hold steady.
 
@@ -204,6 +229,7 @@ I will evolve this strategy over time:
 - If risk rules feel too tight or too loose: adjust them with justification
 - If new data sources become available: integrate them into analyze.py
 - If market regime changes (bull → bear, low vol → high vol): adapt accordingly
+- If the analysis pipeline needs restructuring: change it freely
 
 All changes are committed to the repo with clear reasoning in the commit message.
 
