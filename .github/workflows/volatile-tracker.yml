@@ -1,0 +1,44 @@
+name: Volatile Asset Tracker
+
+on:
+  schedule:
+    # Every 10 minutes, 24/7 (crypto never sleeps)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action: run, add_watch, remove_watch, force_exit'
+        required: false
+        default: 'run'
+      symbol:
+        description: 'Symbol for add/remove (e.g., bitcoin, NVDA)'
+        required: false
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run volatile tracker
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ACTION: ${{ github.event.inputs.action || 'run' }}
+          SYMBOL: ${{ github.event.inputs.symbol || '' }}
+        run: python volatile_tracker.py
+
+      - name: Commit state changes
+        run: |
+          git config user.name "claude-trading-bot"
+          git config user.email "bot@example.com"
+          git add volatile_state.json
+          git diff --cached --quiet || (git commit -m "Update volatile tracker state" && git push)

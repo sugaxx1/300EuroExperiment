@@ -221,6 +221,68 @@ When starting a new conversation:
 
 ---
 
+## Volatile Asset Tracker (volatile_tracker.py)
+
+### Purpose
+High-frequency monitor for volatile assets (crypto 24/7, stocks during market hours). Designed for short-term trades (hours to days) where timing matters. Runs every 10 minutes via GitHub Actions, independent of the hourly analyzer.
+
+### Three-Tier Architecture (cost optimization)
+
+| Tier | Model | Cost/call | Frequency | Purpose |
+|------|-------|-----------|-----------|---------|
+| Pre-filter | Python only | $0 | Every run | Check if prices moved enough to care |
+| Triage | Claude Haiku | ~$0.003 | ~20% of runs | Quick assessment: interesting or noise? |
+| Decision | Claude Sonnet | ~$0.04 | ~5% of runs | Full entry/exit analysis |
+
+**Estimated cost: ~$7-10/month** ($0.25/day normal, $0.90/day volatile)
+
+### State Machine
+
+- **WATCHING** — No position. Pre-filter checks watchlist for volatility spikes. Haiku called only when triggered.
+- **IN_POSITION** — Holding an asset. Every run checks stop-loss/take-profit. Haiku assesses hold/exit when triggered.
+- **COOLDOWN** — After exit. 1-hour wait before re-entering.
+
+State persisted in `volatile_state.json` (git-committed between runs).
+
+### Pre-filter Thresholds (zero API cost)
+
+| Condition | WATCHING | IN_POSITION |
+|-----------|----------|-------------|
+| Price move since last check | >2% | >1.5% |
+| Price move in last hour | >5% | >3% |
+| Time since last Haiku call | >2 hours | >1 hour |
+| Stop-loss/TP hit | N/A | Immediate exit (no LLM) |
+
+### Exit Strategy (layered)
+
+1. **Hard stop-loss** — Pure Python, immediate Discord exit signal, no second-guessing
+2. **Take-profit hit** — Haiku decides: full exit or set trailing stop
+3. **Trailing stop** — 2% below highest price since entry
+4. **Time-based** — If held >150% of planned timeframe, bias toward exit
+5. **Claude-decided** — Sonnet for ambiguous situations only
+
+### Daily API Caps (cost safety)
+- Max 50 Haiku calls/day, max 10 Sonnet calls/day
+- If exceeded, falls back to rule-based stop-loss/take-profit only
+
+### Default Watchlist
+- Crypto (24/7): BTC, ETH, SOL
+- Stocks: Added via workflow dispatch or hourly analyzer suggestions
+
+### Manual Controls (workflow dispatch)
+- `action=add_watch, symbol=bitcoin` — Add asset to watchlist
+- `action=remove_watch, symbol=bitcoin` — Remove asset
+- `action=force_exit` — Force exit current position
+- `action=run` — Normal run (default)
+
+### Interaction with Hourly Analyzer
+- Both systems respect the same risk rules (max 3 positions, 5% max loss, etc.)
+- Both read `portfolio.md` for position awareness
+- Volatile tracker handles its watchlist; hourly analyzer handles broader market
+- Neither auto-updates `portfolio.md` — user executes and reports back
+
+---
+
 ## Self-Improvement
 
 I will evolve this strategy over time:

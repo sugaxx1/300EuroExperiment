@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "last_run": null,
+  "mode": "WATCHING",
+  "watchlist": [
+    {
+      "symbol": "bitcoin",
+      "source": "coingecko",
+      "yahoo_symbol": null,
+      "last_price": null,
+      "price_history": [],
+      "tracked_since": "2026-03-17T00:00:00Z"
+    },
+    {
+      "symbol": "ethereum",
+      "source": "coingecko",
+      "yahoo_symbol": null,
+      "last_price": null,
+      "price_history": [],
+      "tracked_since": "2026-03-17T00:00:00Z"
+    },
+    {
+      "symbol": "solana",
+      "source": "coingecko",
+      "yahoo_symbol": null,
+      "last_price": null,
+      "price_history": [],
+      "tracked_since": "2026-03-17T00:00:00Z"
+    }
+  ],
+  "position": null,
+  "daily_api_calls": {},
+  "cooldown_until": null,
+  "last_haiku_call": null
+}
