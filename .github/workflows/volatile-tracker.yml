@@ -1,10 +1,9 @@
 name: Volatile Asset Tracker
 
 on:
-  # cron-job.org triggers every 10 min via workflow_dispatch (reliable)
-  # GitHub cron kept as fallback (unreliable but free backup)
-  schedule:
-    - cron: '7 * * * *'
+  # Disabled — re-enable when needed
+  # schedule:
+  #   - cron: '7 * * * *'
   workflow_dispatch:
     inputs:
       action:
