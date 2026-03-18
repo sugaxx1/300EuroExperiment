@@ -1,8 +1,9 @@
 name: Volatile Asset Tracker
 
 on:
+  # cron-job.org triggers every 10 min via workflow_dispatch (reliable)
+  # GitHub cron kept as fallback (unreliable but free backup)
   schedule:
-    # Once per hour — the script loops internally with 10-min intervals
     - cron: '7 * * * *'
   workflow_dispatch:
     inputs:
@@ -20,7 +21,6 @@ permissions:
 jobs:
   track:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -32,48 +32,17 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Configure git
+      - name: Run volatile tracker
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ACTION: ${{ github.event.inputs.action || 'run' }}
+          SYMBOL: ${{ github.event.inputs.symbol || '' }}
+        run: python volatile_tracker.py
+
+      - name: Commit state changes
         run: |
           git config user.name "claude-trading-bot"
           git config user.email "bot@example.com"
-
-      # For manual actions (add_watch, remove_watch, force_exit): run once
-      - name: Run manual action
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'run' }}
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          ACTION: ${{ github.event.inputs.action }}
-          SYMBOL: ${{ github.event.inputs.symbol || '' }}
-        run: |
-          python volatile_tracker.py
           git add volatile_state.json
           git diff --cached --quiet || (git commit -m "Update volatile tracker state" && git push)
-
-      # For scheduled/manual runs: loop 6 times with 10-min intervals
-      - name: Monitor loop (6 checks, ~60 min)
-        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'run') }}
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          ACTION: run
-          SYMBOL: ''
-        run: |
-          for i in 1 2 3 4 5 6; do
-            echo "=== Check $i/6 at $(date -u) ==="
-
-            # Pull latest state (another run may have pushed)
-            git pull --rebase --quiet || true
-
-            python volatile_tracker.py
-
-            # Commit and push state if changed
-            git add volatile_state.json
-            git diff --cached --quiet || (git commit -m "Update volatile tracker state" && git push)
-
-            # Sleep 10 min between checks (skip after last)
-            if [ "$i" -lt 6 ]; then
-              echo "Sleeping 10 minutes..."
-              sleep 600
-            fi
-          done
