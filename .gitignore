@@ -3,3 +3,4 @@ __pycache__/
 .env
 notify.sh
 last_signal.json
+trigger_volatile.bat
