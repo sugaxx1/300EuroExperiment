@@ -2,8 +2,9 @@ name: Market Analysis
 
 on:
   # Hourly on weekdays, 7am-9pm CET (6am-8pm UTC) — covers EU + US market hours
-  schedule:
-    - cron: '17 6-20 * * 1-5'
+  # Disabled — re-enable when needed
+  # schedule:
+  #   - cron: '17 6-20 * * 1-5'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
